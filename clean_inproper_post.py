@@ -115,7 +115,7 @@ session.post("http://www.mitbbs.com/newindex/mitbbs_bbslogin.php", data=auth)
 r   = requests.get(URL, cookies=session.cookies)
 r.encoding = "gb2312"
 
-soup = BeautifulSoup(str(r.text))
+soup = BeautifulSoup(r.text)
 
 # C. parse each article
 itemHolder = soup.findAll('td', {'class' : 'taolun_leftright'})
@@ -134,7 +134,7 @@ for n, item in enumerate(items):
         # Read the content of a post
         r     = requests.get(link, cookies=session.cookies)
         r.encoding = "gb2312"
-        soup  = BeautifulSoup(str(r.text))
+        soup  = BeautifulSoup(r.text)
         
         boxes = [u.parent for u in soup.findAll("td", {"class" : "wenzhang_bg"})]
         users = [b.find('a').text.strip() for b in boxes]
