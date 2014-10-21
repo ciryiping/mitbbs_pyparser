@@ -22,11 +22,19 @@
 import re, sys
 from bs4 import BeautifulSoup
 import requests
+from snownlp import SnowNLP
 
 # ===== User configuration =====
-USERID   = 'Your User Name Here'
-PASSWD   = 'Your Password Here'
+# import USERID and PASSWD from a file called userID.py
+from userID import *
+#USERID   = 'Your User Name Here'
+#PASSWD   = 'Your Password Here'
 URL      = "http://www.mitbbs.com/bbsdoc/NewYork.html"
+#URL      = "http://www.mitbbs.com/club_bbsdoc/letsgo.html"
+club = False #Indicate whether a URL is of a club or not
+if "club_bbsdoc" in URL:
+    club = True
+
 DICTFILE = "wordDict.txt" # each line is treated as one word and converted to lower case.
 # ===== End of User configuration =====
 
@@ -118,7 +126,10 @@ r.encoding = "gb2312"
 soup = BeautifulSoup(r.text)
 
 # C. parse each article
-itemHolder = soup.findAll('td', {'class' : 'taolun_leftright'})
+if club:
+    itemHolder = soup.findAll('td', {'class' : 'jiahui-4'})
+else:    
+    itemHolder = soup.findAll('td', {'class' : 'taolun_leftright'})
 items      = itemHolder[0].findAll('a', {'class' : 'news1'})
 
 for n, item in enumerate(items):
@@ -161,6 +172,7 @@ for n, item in enumerate(items):
         
         # Scan through each post
         isDirty = False
+        isNegative = False
         info    = [] # I used a list in case the one needs to put in more text
         for i, (u, p, d) in enumerate(zip(users, posts, delOpts)):
             found = findWord(p, wordList)
@@ -172,10 +184,26 @@ for n, item in enumerate(items):
                 else:      # All other articles are treated as comments
                     info.append("         A reply contains: " + found)
                     break
+            #Sentiment analysis
+            #todo: 现在训练数据主要是买卖东西时的评价，需要新的 training data
+            snow_p = SnowNLP(p)
+            if snow_p.sentiments <= -1:  #disabled at the moment
+                isNegative = True
+                if i == 0:
+                    info.append("The main article is very negative: "+p)
+                    break
+                else:
+                    info.append("       A reply is very negative: " + p)
+                    break
         if isDirty: # @TODO: add more criteria
             print("   Dirty word Found in post: " + title)
             print("      " + info[0])
             deletePost(d, delFormOpts, cookies=session.cookies, ask=True)
+        if isNegative:  
+            print("   Negative sentiment in post: " + title)
+            print("      " + info[0])
+            deletePost(d, delFormOpts, cookies=session.cookies, ask=True)
+
 
     except Exception as e:
         print("Error occured {} for {}.".format(str(e), title))
