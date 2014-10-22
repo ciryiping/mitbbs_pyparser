@@ -117,13 +117,29 @@ def deletePost(d, opts, cookies, ask=True):
 #    user: user id
 #    post: post string
 #Write the post in to a file named by the user id + current time
-#  
+#    
 def saveMessage(user, post):
     filename = user + strftime("%Y-%m-%d_%H:%M:%S", gmtime())
     f = open(filename,"w")
     f.write(post)
     f.close()
-    
+
+#Send a mail containing the deleted post to the author
+#INPUT: 
+#    user: user id
+#    post: post string
+#OUTPUT
+#    Boolean, whether the mail was sent.
+def sendMessage(user,post):
+    mailbox = {'userid' : user, 'title' : 'Post deletion notice', 'text' : post}
+    rMail = requests.post(r'http://www.mitbbs.com/mitbbs_bbssndmail.php', \
+        data=mailbox, cookies = session.cookies, allow_redirects=True)
+    rMail.encoding = "gb2312"
+    if rMail.text.find(r"信件已成功发送") != -1: #@TODO: there must be a better way to do this
+        return True 
+    else: 
+        return False   
+
 # login to http://www.mitbbs.com
 auth = {'id' : USERID, 'passwd' : PASSWD, 'kick_multi' : '1'}
 session = requests.session()
@@ -203,6 +219,8 @@ for n, item in enumerate(items):
             deleteReturn = deletePost(d, delFormOpts, cookies=session.cookies, ask=True)
             if deleteReturn:
                 saveMessage(u,p)
+                #Currently, the following action cannot be done with the test account
+                #sendMessage(u,p)
 
 
     except Exception as e:
